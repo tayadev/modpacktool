@@ -2,8 +2,8 @@ on: [push]
 
 name: build
 jobs:
-  my-job:
-    name: my-job
+  build:
+    name: build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -16,3 +16,4 @@ jobs:
       - uses: actions/upload-artifact@v2
         with:
           path: mpt.exe
+          name: mpt.exe
