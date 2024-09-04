@@ -1,0 +1,17 @@
+{
+  "name": "mpt_js",
+  "module": "mpt.ts",
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "appdirsjs": "^1.2.7",
+    "commander": "^12.1.0",
+    "signale": "^1.4.0",
+    "wasmoon": "^1.16.0"
+  }
+}
