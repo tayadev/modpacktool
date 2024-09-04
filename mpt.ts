@@ -1,5 +1,4 @@
 import { LuaFactory } from "wasmoon"
-import fs from "node:fs/promises"
 import {default as fspath} from "node:path"
 import { program } from "commander"
 
