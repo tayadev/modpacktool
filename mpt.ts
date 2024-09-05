@@ -1,11 +1,12 @@
 import { LuaFactory } from "wasmoon"
 import {default as fspath} from "node:path"
 import { program } from "commander"
+import AdmZip from "adm-zip"
 
 enum RequirementType {
-  required,
-  unsupported,
-  optional
+  required = 'required',
+  unsupported = 'unsupported',
+  optional = 'optional'
 }
 
 interface Modpack {
@@ -15,7 +16,7 @@ interface Modpack {
   author: string
   url: string
   icon: string
-  dependencies: {id: string, version: string}[]
+  dependencies: {[id: string]: string}
   external_files: {path: string, hashes: {sha1: string, sha256: string}, downloads: string[], fileSize: number, env: {client: RequirementType, server: RequirementType}}[],
   files: {path: string, content: Blob}[]
   server_files: {path: string, content: Blob}[]
@@ -57,7 +58,7 @@ const pack: Modpack = {
   author: '',
   url: '',
   icon: '',
-  dependencies: [],
+  dependencies: {},
   external_files: [],
   files: [],
   server_files: [],
@@ -67,11 +68,15 @@ const pack: Modpack = {
 async function parsePackFile(file: string) {
 
   const getMcVersion = () => {
-    return pack.dependencies.find(dep => dep.id === 'minecraft')?.version
+    return pack.dependencies['minecraft']
   }
 
   const getLoader = () => {
-    return pack.dependencies.find(dep => dep.id !== 'minecraft')?.id
+    for (const id of Object.keys(pack.dependencies)) {
+      if (id !== 'minecraft') {
+        return id
+      }
+    }
   }
 
   const lua = await luafactory.createEngine()
@@ -83,10 +88,10 @@ async function parsePackFile(file: string) {
   lua.global.set('url', (url: string) => pack.url = url)
   lua.global.set('icon', (icon: string) => pack.icon = icon)
 
-  lua.global.set('minecraft', (version: string) => pack.dependencies.push({id: 'minecraft', version: version}))
+  lua.global.set('minecraft', (version: string) => pack.dependencies['minecraft'] = version)
   lua.global.set('modloader', (ml: string) => {
     const [id, version] = ml.split('@')
-    pack.dependencies.push({id: id, version: version})
+    pack.dependencies[id] = version
   })
 
   // TODO: configurable content sources
@@ -186,13 +191,13 @@ function assembleMMCPack(pack: Modpack, output_dir: string) {
     components: [
       {
         cachedName: 'Minecraft',
-        cachedVersion: pack.dependencies.find(dep => dep.id === 'minecraft')?.version,
+        cachedVersion: pack.dependencies['minecraft'],
         important: true,
         uid: 'net.minecraft',
-        version: pack.dependencies.find(dep => dep.id === 'minecraft')?.version
+        version: pack.dependencies['minecraft']
         // TODO: figure out if cachedRequires lwjgl would be needed
       },
-      ...pack.dependencies.filter(dep => dep.id !== 'minecraft').map(dep => getComponent(dep.id, dep.version))
+      ...Object.keys(pack.dependencies).filter(id => id !== 'minecraft').map(id => getComponent(id, pack.dependencies[id]))
     ]
   }))
 
@@ -217,7 +222,32 @@ function assembleMMCPack(pack: Modpack, output_dir: string) {
 
 // Assembles the Modpack in the .mrpack format
 function assembleModrinthPack(pack: Modpack, output_dir: string) {
-  throw new Error('Not implemented')
+  const zip = new AdmZip()
+
+  zip.addFile('modrinth.index.json', Buffer.from(JSON.stringify({
+    formatVersion: 1,
+    game: 'minecraft',
+    versionId: pack.version,
+    name: pack.name,
+    summary: pack.description,
+    files: pack.external_files,
+    dependencies: pack.dependencies
+  }), 'utf8'))
+
+  // add files in overrides folder
+  pack.files.forEach(f => {
+    zip.addFile(fspath.join('overrides', f.path), f.content)
+  })
+
+  pack.server_files.forEach(f => {
+    zip.addFile(fspath.join('server-overrides', f.path), f.content)
+  })
+
+  pack.client_files.forEach(f => {
+    zip.addFile(fspath.join('client-overrides', f.path), f.content)
+  })
+
+  zip.writeZip(output_dir + '.mrpack')
 }
 
 // Assembles the Modpack as a curseforge pack
