@@ -3,10 +3,11 @@
 - Calls made from lua aren't being waited for completion, thus if we need to download files, we start assembling the modpack before the files are downloaded. This is a problem.
   - Temporary solution: run it twice, first to download the files, then to assemble the modpack.
 
-- Curseforge and Modrinth Exporters are not implemented yet.
+- Curseforge Exporter is not implemented yet.
 - Environment specific file overrides are not implemented yet.
 - Curseforge as a content source is not implemented yet.
 
+- Add a mode where you run the program as a prismlauncher pre-launch-command and it downloads a github repo and assembles the modpack from that, then launches the game.
 
 ## Done
 
